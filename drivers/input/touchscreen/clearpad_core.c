@@ -2295,25 +2295,6 @@ static void synaptics_funcarea_up(struct synaptics_clearpad *this,
 		LOG_EVENT(this, "%s up\n", valid ? "pt" : "unused pt");
 		if (!valid)
 			break;
-#ifdef CONFIG_TOUCHSCREEN_DOUBLE_TAP_TO_WAKE
-		if (this->easy_wakeup_config.gesture_enable && !lcd_on && cur->id == 0) {
-			LOG_CHECK(this, "D2W: difference: %llu", ktime_to_ms(ktime_get()) - d2w_previous_time);
-			if ((ktime_to_ms(ktime_get()) - d2w_previous_time) > DOUBLE_TAP_TO_WAKE_TIMEOUT) {
-				/* Not sure if using this->easy_wakeup_config.timeout_delay is wise, where is it set from? */
-				d2w_previous_time = ktime_to_ms(ktime_get());
-			} else {
-				if (is_close_to_previous_hit(cur->x, cur->y)) {
-					LOG_CHECK(this, "D2W: Unlock!");
-					evgen_execute(this->input, this->evgen_blocks, "double_tap");
-				} else {
-					LOG_CHECK(this, "D2W: Second tap too far off");
-				}
-			}
-
-			previous_x = cur->x;
-			previous_y = cur->y;
-		}
-#endif
 		input_mt_slot(idev, pointer->cur.id);
 		input_mt_report_slot_state(idev, pointer->cur.tool, false);
 		break;
@@ -2511,6 +2492,25 @@ static void synaptics_report_finger_n(struct synaptics_clearpad *this,
 			LOG_VERBOSE(this, "validate pointer %d [func %d]\n",
 				    new_point.id, pointer->funcarea
 				    ? pointer->funcarea->func : -1);
+#ifdef CONFIG_TOUCHSCREEN_DOUBLE_TAP_TO_WAKE
+			if (this->easy_wakeup_config.gesture_enable && !lcd_on && pointer->cur.id == 0) {
+				LOG_CHECK(this, "D2W: difference: %llu", ktime_to_ms(ktime_get()) - d2w_previous_time);
+				if ((ktime_to_ms(ktime_get()) - d2w_previous_time) > DOUBLE_TAP_TO_WAKE_TIMEOUT) {
+					/* Not sure if using this->easy_wakeup_config.timeout_delay is wise, where is it set from? */
+					d2w_previous_time = ktime_to_ms(ktime_get());
+				} else {
+					if (is_close_to_previous_hit(pointer->cur.x, pointer->cur.y)) {
+						LOG_CHECK(this, "D2W: Unlock!");
+						evgen_execute(this->input, this->evgen_blocks, "double_tap");
+					} else {
+						LOG_CHECK(this, "D2W: Second tap too far off");
+					}
+				}
+
+				previous_x = pointer->cur.x;
+				previous_y = pointer->cur.y;
+			}
+#endif
 		}
 		if (pointer->funcarea) {
 			struct synaptics_area *extension
